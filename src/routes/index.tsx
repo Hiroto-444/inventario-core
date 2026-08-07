@@ -222,12 +222,36 @@ function InventoryDashboard() {
             )}
             <Button variant="outline" size="sm" className="gap-2" onClick={downloadTemplate}>
               <FileDown className="h-4 w-4" />
-              Modelo CSV
+              Consolidar CSV
             </Button>
             <Button size="sm" className="gap-2" onClick={() => inputRef.current?.click()}>
               <Upload className="h-4 w-4" />
               Importar CSV
             </Button>
+            {machines.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" size="sm" className="gap-2" disabled={!!exporting}>
+                    {exporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Exportar painel
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => void exportAs("pdf")}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Baixar PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => void exportAs("png")}>
+                    <FileImage className="mr-2 h-4 w-4" />
+                    Baixar PNG
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <input
               ref={inputRef}
               type="file"
@@ -240,7 +264,8 @@ function InventoryDashboard() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1600px] space-y-6 p-4 md:p-6">
+      <main ref={captureRef} className="mx-auto max-w-[1600px] space-y-6 p-4 md:p-6">
+
         {machines.length === 0 ? (
           <section
             onDragOver={(e) => e.preventDefault()}
