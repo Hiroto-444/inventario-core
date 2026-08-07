@@ -10,8 +10,18 @@ import {
   Monitor,
   Trash2,
   ShieldOff,
+  Download,
+  FileImage,
+  FileText,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import logo from "@/assets/logo.png";
@@ -80,7 +90,54 @@ function Kpi({
 function InventoryDashboard() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [query, setQuery] = useState("");
+  const [exporting, setExporting] = useState<null | "png" | "pdf">(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const captureRef = useRef<HTMLDivElement>(null);
+
+  const capture = async () => {
+    const node = captureRef.current;
+    if (!node) return null;
+    const { default: html2canvas } = await import("html2canvas-pro");
+    return html2canvas(node, {
+      backgroundColor: getComputedStyle(document.body).backgroundColor || "#0b1220",
+      scale: 2,
+      useCORS: true,
+      windowWidth: Math.max(node.scrollWidth, 1400),
+    });
+  };
+
+  const exportAs = async (kind: "png" | "pdf") => {
+    if (exporting) return;
+    setExporting(kind);
+    try {
+      const canvas = await capture();
+      if (!canvas) return;
+      const stamp = new Date().toISOString().slice(0, 10);
+      if (kind === "png") {
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `inventario-desktops-${stamp}.png`;
+        link.click();
+      } else {
+        const { default: jsPDF } = await import("jspdf");
+        const img = canvas.toDataURL("image/png");
+        const orientation = canvas.width >= canvas.height ? "landscape" : "portrait";
+        const pdf = new jsPDF({ orientation, unit: "pt", format: "a4" });
+        const pw = pdf.internal.pageSize.getWidth();
+        const ph = pdf.internal.pageSize.getHeight();
+        const ratio = Math.min(pw / canvas.width, ph / canvas.height);
+        const w = canvas.width * ratio;
+        const h = canvas.height * ratio;
+        pdf.addImage(img, "PNG", (pw - w) / 2, (ph - h) / 2, w, h);
+        pdf.save(`inventario-desktops-${stamp}.pdf`);
+      }
+      toast.success(`Dashboard exportado em ${kind.toUpperCase()}`);
+    } catch {
+      toast.error("Não foi possível exportar o dashboard");
+    } finally {
+      setExporting(null);
+    }
+  };
 
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -165,12 +222,36 @@ function InventoryDashboard() {
             )}
             <Button variant="outline" size="sm" className="gap-2" onClick={downloadTemplate}>
               <FileDown className="h-4 w-4" />
-              Modelo CSV
+              Consolidar CSV
             </Button>
             <Button size="sm" className="gap-2" onClick={() => inputRef.current?.click()}>
               <Upload className="h-4 w-4" />
               Importar CSV
             </Button>
+            {machines.length > 0 && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="secondary" size="sm" className="gap-2" disabled={!!exporting}>
+                    {exporting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="h-4 w-4" />
+                    )}
+                    Exportar painel
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => void exportAs("pdf")}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Baixar PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => void exportAs("png")}>
+                    <FileImage className="mr-2 h-4 w-4" />
+                    Baixar PNG
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
             <input
               ref={inputRef}
               type="file"
@@ -183,7 +264,8 @@ function InventoryDashboard() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-[1600px] space-y-6 p-4 md:p-6">
+      <main ref={captureRef} className="mx-auto max-w-[1600px] space-y-6 p-4 md:p-6">
+
         {machines.length === 0 ? (
           <section
             onDragOver={(e) => e.preventDefault()}
