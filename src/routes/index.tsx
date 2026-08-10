@@ -410,7 +410,9 @@ function InventoryDashboard() {
               </div>
             </section>
 
+            {!captureMode && (
             <section className="space-y-3">
+
               <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Alertas
               </h2>
