@@ -280,7 +280,51 @@ function InventoryDashboard() {
         </div>
       </header>
 
+      <Dialog open={!!pendingKind} onOpenChange={(o) => !o && setPendingKind(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nome da empresa</DialogTitle>
+            <DialogDescription>
+              O nome aparecerá centralizado no topo do arquivo exportado.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const kind = pendingKind;
+              setPendingKind(null);
+              if (kind) void exportAs(kind);
+            }}
+            className="space-y-4"
+          >
+            <Input
+              autoFocus
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              placeholder="Ex.: Core TI Expert"
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setPendingKind(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={!company.trim()}>
+                Gerar {pendingKind?.toUpperCase()}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <main ref={captureRef} className="mx-auto max-w-[1600px] space-y-6 p-4 md:p-6">
+        {captureMode && (
+          <div className="border-b pb-4 text-center">
+            <h2 className="text-2xl font-black tracking-tight text-foreground">{company}</h2>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              Inventário de Desktops · {new Date().toLocaleDateString("pt-BR")}
+            </p>
+          </div>
+        )}
+
 
         {machines.length === 0 ? (
           <section
