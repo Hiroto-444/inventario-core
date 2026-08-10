@@ -22,7 +22,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+
 import { Toaster } from "@/components/ui/sonner";
 import logo from "@/assets/logo.png";
 import {
@@ -91,6 +100,9 @@ function InventoryDashboard() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [query, setQuery] = useState("");
   const [exporting, setExporting] = useState<null | "png" | "pdf">(null);
+  const [pendingKind, setPendingKind] = useState<null | "png" | "pdf">(null);
+  const [company, setCompany] = useState("");
+  const [captureMode, setCaptureMode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const captureRef = useRef<HTMLDivElement>(null);
 
@@ -109,14 +121,24 @@ function InventoryDashboard() {
   const exportAs = async (kind: "png" | "pdf") => {
     if (exporting) return;
     setExporting(kind);
+    setCaptureMode(true);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
     try {
       const canvas = await capture();
       if (!canvas) return;
       const stamp = new Date().toISOString().slice(0, 10);
+      const slug =
+        company
+          .trim()
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "") || "inventario";
       if (kind === "png") {
         const link = document.createElement("a");
         link.href = canvas.toDataURL("image/png");
-        link.download = `inventario-desktops-${stamp}.png`;
+        link.download = `${slug}-desktops-${stamp}.png`;
         link.click();
       } else {
         const { default: jsPDF } = await import("jspdf");
@@ -129,15 +151,17 @@ function InventoryDashboard() {
         const w = canvas.width * ratio;
         const h = canvas.height * ratio;
         pdf.addImage(img, "PNG", (pw - w) / 2, (ph - h) / 2, w, h);
-        pdf.save(`inventario-desktops-${stamp}.pdf`);
+        pdf.save(`${slug}-desktops-${stamp}.pdf`);
       }
       toast.success(`Dashboard exportado em ${kind.toUpperCase()}`);
     } catch {
       toast.error("Não foi possível exportar o dashboard");
     } finally {
+      setCaptureMode(false);
       setExporting(null);
     }
   };
+
 
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -241,14 +265,15 @@ function InventoryDashboard() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => void exportAs("pdf")}>
+                  <DropdownMenuItem onSelect={() => setPendingKind("pdf")}>
                     <FileText className="mr-2 h-4 w-4" />
                     Baixar PDF
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => void exportAs("png")}>
+                  <DropdownMenuItem onSelect={() => setPendingKind("png")}>
                     <FileImage className="mr-2 h-4 w-4" />
                     Baixar PNG
                   </DropdownMenuItem>
+
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
@@ -264,7 +289,51 @@ function InventoryDashboard() {
         </div>
       </header>
 
+      <Dialog open={!!pendingKind} onOpenChange={(o) => !o && setPendingKind(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nome da empresa</DialogTitle>
+            <DialogDescription>
+              O nome aparecerá centralizado no topo do arquivo exportado.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              const kind = pendingKind;
+              setPendingKind(null);
+              if (kind) void exportAs(kind);
+            }}
+            className="space-y-4"
+          >
+            <Input
+              autoFocus
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              placeholder="Ex.: Core TI Expert"
+            />
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setPendingKind(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={!company.trim()}>
+                Gerar {pendingKind?.toUpperCase()}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       <main ref={captureRef} className="mx-auto max-w-[1600px] space-y-6 p-4 md:p-6">
+        {captureMode && (
+          <div className="border-b pb-4 text-center">
+            <h2 className="text-2xl font-black tracking-tight text-foreground">{company}</h2>
+            <p className="text-xs uppercase tracking-widest text-muted-foreground">
+              Inventário de Desktops · {new Date().toLocaleDateString("pt-BR")}
+            </p>
+          </div>
+        )}
+
 
         {machines.length === 0 ? (
           <section
@@ -311,15 +380,18 @@ function InventoryDashboard() {
                 <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   Máquinas
                 </h2>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <input
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Buscar hostname, usuário, IP, SO…"
-                    className="h-9 w-72 rounded-lg border bg-background pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
-                  />
-                </div>
+                {!captureMode && (
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder="Buscar hostname, usuário, IP, SO…"
+                      className="h-9 w-72 rounded-lg border bg-background pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:ring-2 focus:ring-ring"
+                    />
+                  </div>
+                )}
+
               </div>
               <MachineTable machines={filtered} />
               <p className="border-t px-4 py-2 text-xs text-muted-foreground">
@@ -338,7 +410,9 @@ function InventoryDashboard() {
               </div>
             </section>
 
+            {!captureMode && (
             <section className="space-y-3">
+
               <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                 Alertas
               </h2>
@@ -384,6 +458,8 @@ function InventoryDashboard() {
                 />
               </div>
             </section>
+            )}
+
           </>
         )}
       </main>
