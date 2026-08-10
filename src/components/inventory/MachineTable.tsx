@@ -91,8 +91,8 @@ export function MachineTable({ machines }: { machines: Machine[] }) {
               <td className="px-2 py-2 font-mono text-[11px] leading-tight text-muted-foreground">
                 {m.mac}
               </td>
-              <td className="whitespace-nowrap px-2 py-2 text-[11px]">
-                <span className="inline-flex items-center gap-1.5 text-foreground">
+              <td className="px-2 py-2 text-[11px] leading-tight">
+                <span className="inline-flex flex-wrap items-center gap-1 text-foreground">
                   {m.connectionType === "Wi-Fi" ? (
                     <Wifi className="h-3.5 w-3.5 text-primary" />
                   ) : (
@@ -116,7 +116,7 @@ export function MachineTable({ machines }: { machines: Machine[] }) {
               <td className="whitespace-nowrap px-2 py-2">
                 <StorageBar m={m} />
               </td>
-              <td className="whitespace-nowrap px-2 py-2 text-[11px] text-foreground">{m.os}</td>
+              <td className="px-2 py-2 text-[11px] leading-tight text-foreground">{m.os}</td>
               <td className="whitespace-nowrap px-2 py-2 text-[11px]">
                 <span
                   className={cn(
