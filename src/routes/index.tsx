@@ -91,6 +91,9 @@ function InventoryDashboard() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [query, setQuery] = useState("");
   const [exporting, setExporting] = useState<null | "png" | "pdf">(null);
+  const [pendingKind, setPendingKind] = useState<null | "png" | "pdf">(null);
+  const [company, setCompany] = useState("");
+  const [captureMode, setCaptureMode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const captureRef = useRef<HTMLDivElement>(null);
 
@@ -109,14 +112,24 @@ function InventoryDashboard() {
   const exportAs = async (kind: "png" | "pdf") => {
     if (exporting) return;
     setExporting(kind);
+    setCaptureMode(true);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
     try {
       const canvas = await capture();
       if (!canvas) return;
       const stamp = new Date().toISOString().slice(0, 10);
+      const slug =
+        company
+          .trim()
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "") || "inventario";
       if (kind === "png") {
         const link = document.createElement("a");
         link.href = canvas.toDataURL("image/png");
-        link.download = `inventario-desktops-${stamp}.png`;
+        link.download = `${slug}-desktops-${stamp}.png`;
         link.click();
       } else {
         const { default: jsPDF } = await import("jspdf");
@@ -129,15 +142,17 @@ function InventoryDashboard() {
         const w = canvas.width * ratio;
         const h = canvas.height * ratio;
         pdf.addImage(img, "PNG", (pw - w) / 2, (ph - h) / 2, w, h);
-        pdf.save(`inventario-desktops-${stamp}.pdf`);
+        pdf.save(`${slug}-desktops-${stamp}.pdf`);
       }
       toast.success(`Dashboard exportado em ${kind.toUpperCase()}`);
     } catch {
       toast.error("Não foi possível exportar o dashboard");
     } finally {
+      setCaptureMode(false);
       setExporting(null);
     }
   };
+
 
   const handleFiles = useCallback(async (files: FileList | null) => {
     if (!files || files.length === 0) return;
