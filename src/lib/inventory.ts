@@ -24,7 +24,11 @@ export type Machine = {
 };
 
 function stripQuotes(v: string) {
-  return v.trim().replace(/^\uFEFF/, "").replace(/^"|"$/g, "").trim();
+  return v
+    .trim()
+    .replace(/^\uFEFF/, "")
+    .replace(/^"|"$/g, "")
+    .trim();
 }
 
 function splitLine(line: string, delim: string) {
@@ -147,9 +151,7 @@ export function parseCsv(text: string, fileName: string): Machine[] {
     const os = pick(row, "os").replace(/^Microsoft\s+/i, "");
     const installRaw = pick(row, "install");
     const installDateObj = parseDate(installRaw);
-    const ageYears = installDateObj
-      ? (Date.now() - installDateObj.getTime()) / (365.25 * 24 * 3600 * 1000)
-      : null;
+    const ageYears = installDateObj ? (Date.now() - installDateObj.getTime()) / (365.25 * 24 * 3600 * 1000) : null;
     const domain = pick(row, "domain");
     const av = pick(row, "av");
     const hostname = pick(row, "hostname") || `SEM-NOME-${idx + 1}`;
@@ -181,7 +183,7 @@ export function parseCsv(text: string, fileName: string): Machine[] {
   });
 }
 
-export const STORAGE_CRITICAL = 90;
+export const STORAGE_CRITICAL = 85;
 export const OS_OLD_YEARS = 5;
 
 export function isStorageCritical(m: Machine) {
