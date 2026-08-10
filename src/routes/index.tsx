@@ -458,6 +458,8 @@ function InventoryDashboard() {
                 />
               </div>
             </section>
+            )}
+
           </>
         )}
       </main>
