@@ -183,7 +183,7 @@ export function parseCsv(text: string, fileName: string): Machine[] {
   });
 }
 
-export const STORAGE_CRITICAL = 90%;
+export const STORAGE_CRITICAL = 90;
 export const OS_OLD_YEARS = 5;
 
 export function isStorageCritical(m: Machine) {
