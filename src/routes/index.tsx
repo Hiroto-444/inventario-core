@@ -256,14 +256,15 @@ function InventoryDashboard() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => void exportAs("pdf")}>
+                  <DropdownMenuItem onSelect={() => setPendingKind("pdf")}>
                     <FileText className="mr-2 h-4 w-4" />
                     Baixar PDF
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => void exportAs("png")}>
+                  <DropdownMenuItem onSelect={() => setPendingKind("png")}>
                     <FileImage className="mr-2 h-4 w-4" />
                     Baixar PNG
                   </DropdownMenuItem>
+
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
