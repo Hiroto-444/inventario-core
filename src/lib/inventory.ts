@@ -206,3 +206,48 @@ export const CSV_TEMPLATE = [
   '"Hostname";"Usuario_Logado";"IP";"MAC";"Rede_Tipo/Velocidade";"Processador";"Memoria_GB";"Armazenamento";"Sistema_Operacional";"Data_Instalacao_Windows";"Dominio_Grupo";"Antivirus"',
   '"CORE-CORD-01";"CORETEC\\filipe.rosa";"10.62.102.183";"24:FE:9A:04:B7:99";"Wi-Fi 360 Mbps";"11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz";"11,79";"89 GB Livres de 237 GB";"Microsoft Windows 11 Pro";"04/02/2026";"CORETEC.BR";"Windows Defender"',
 ].join("\n");
+
+const EXPORT_HEADERS = [
+  "Hostname",
+  "Usuario_Logado",
+  "IP",
+  "MAC",
+  "Rede_Tipo/Velocidade",
+  "Processador",
+  "Memoria_GB",
+  "Armazenamento",
+  "Sistema_Operacional",
+  "Data_Instalacao_Windows",
+  "Dominio_Grupo",
+  "Antivirus",
+  "Arquivo_Origem",
+];
+
+function csvCell(v: string | number) {
+  return `"${String(v ?? "").replace(/"/g, '""')}"`;
+}
+
+export function machinesToCsv(machines: Machine[]) {
+  const rows = machines.map((m) =>
+    [
+      m.hostname,
+      m.user,
+      m.ip,
+      m.mac,
+      [m.connectionType, m.connectionSpeed].filter(Boolean).join(" "),
+      m.cpu,
+      String(m.ramGb).replace(".", ","),
+      m.storageTotalGb > 0
+        ? `${Math.round(m.storageFreeGb)} GB Livres de ${Math.round(m.storageTotalGb)} GB`
+        : "",
+      m.os,
+      m.installDate,
+      m.domain,
+      m.antivirus,
+      m.sourceFile,
+    ]
+      .map(csvCell)
+      .join(";"),
+  );
+  return [EXPORT_HEADERS.map(csvCell).join(";"), ...rows].join("\n");
+}

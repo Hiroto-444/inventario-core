@@ -41,6 +41,7 @@ import {
   isOsOld,
   isStorageCritical,
   CSV_TEMPLATE,
+  machinesToCsv,
   type Machine,
 } from "@/lib/inventory";
 import { DonutCard } from "@/components/inventory/DonutCard";
@@ -188,15 +189,30 @@ function InventoryDashboard() {
     if (inputRef.current) inputRef.current.value = "";
   }, []);
 
-  const downloadTemplate = () => {
-    const blob = new Blob(["\uFEFF" + CSV_TEMPLATE], { type: "text/csv;charset=utf-8" });
+  const downloadFile = (content: string, name: string) => {
+    const blob = new Blob(["\uFEFF" + content], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "modelo-inventario.csv";
+    a.download = name;
     a.click();
     URL.revokeObjectURL(url);
   };
+
+  const downloadTemplate = () => downloadFile(CSV_TEMPLATE, "modelo-inventario.csv");
+
+  const consolidateCsv = () => {
+    if (machines.length === 0) {
+      toast.error("Não há arquivos importados", {
+        description: "Importe pelo menos um arquivo CSV para consolidar os dados.",
+      });
+      return;
+    }
+    const stamp = new Date().toISOString().slice(0, 10);
+    downloadFile(machinesToCsv(machines), `inventario-consolidado-${stamp}.csv`);
+    toast.success(`CSV consolidado com ${machines.length} máquina(s)`);
+  };
+
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -244,7 +260,7 @@ function InventoryDashboard() {
                 Limpar
               </Button>
             )}
-            <Button variant="outline" size="sm" className="gap-2" onClick={downloadTemplate}>
+            <Button variant="outline" size="sm" className="gap-2" onClick={consolidateCsv}>
               <FileDown className="h-4 w-4" />
               Consolidar CSV
             </Button>
