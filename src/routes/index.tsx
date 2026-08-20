@@ -101,11 +101,21 @@ function InventoryDashboard() {
   const [machines, setMachines] = useState<Machine[]>([]);
   const [query, setQuery] = useState("");
   const [exporting, setExporting] = useState<null | "png" | "pdf">(null);
-  const [pendingKind, setPendingKind] = useState<null | "png" | "pdf">(null);
+  const [pendingKind, setPendingKind] = useState<null | "png" | "pdf" | "csv">(null);
   const [company, setCompany] = useState("");
   const [captureMode, setCaptureMode] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const captureRef = useRef<HTMLDivElement>(null);
+
+  const baseFileName = () => {
+    const now = new Date();
+    const monthYear = now
+      .toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+      .replace(" de ", " ")
+      .replace(/^./, (c) => c.toUpperCase());
+    const name = company.trim() || "Empresa";
+    return `Levantamento ${name} - ${monthYear}`;
+  };
 
   const capture = async () => {
     const node = captureRef.current;
@@ -127,19 +137,11 @@ function InventoryDashboard() {
     try {
       const canvas = await capture();
       if (!canvas) return;
-      const stamp = new Date().toISOString().slice(0, 10);
-      const slug =
-        company
-          .trim()
-          .toLowerCase()
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/[^a-z0-9]+/g, "-")
-          .replace(/^-|-$/g, "") || "inventario";
+      const base = baseFileName();
       if (kind === "png") {
         const link = document.createElement("a");
         link.href = canvas.toDataURL("image/png");
-        link.download = `${slug}-desktops-${stamp}.png`;
+        link.download = `${base}.png`;
         link.click();
       } else {
         const { default: jsPDF } = await import("jspdf");
@@ -152,7 +154,7 @@ function InventoryDashboard() {
         const w = canvas.width * ratio;
         const h = canvas.height * ratio;
         pdf.addImage(img, "PNG", (pw - w) / 2, (ph - h) / 2, w, h);
-        pdf.save(`${slug}-desktops-${stamp}.pdf`);
+        pdf.save(`${base}.pdf`);
       }
       toast.success(`Dashboard exportado em ${kind.toUpperCase()}`);
     } catch {
@@ -201,15 +203,18 @@ function InventoryDashboard() {
 
   const downloadTemplate = () => downloadFile(CSV_TEMPLATE, "modelo-inventario.csv");
 
-  const consolidateCsv = () => {
+  const requestConsolidate = () => {
     if (machines.length === 0) {
       toast.error("Não há arquivos importados", {
         description: "Importe pelo menos um arquivo CSV para consolidar os dados.",
       });
       return;
     }
-    const stamp = new Date().toISOString().slice(0, 10);
-    downloadFile(machinesToCsv(machines), `inventario-consolidado-${stamp}.csv`);
+    setPendingKind("csv");
+  };
+
+  const consolidateCsv = () => {
+    downloadFile(machinesToCsv(machines), `${baseFileName()}.csv`);
     toast.success(`CSV consolidado com ${machines.length} máquina(s)`);
   };
 
@@ -260,7 +265,7 @@ function InventoryDashboard() {
                 Limpar
               </Button>
             )}
-            <Button variant="outline" size="sm" className="gap-2" onClick={consolidateCsv}>
+            <Button variant="outline" size="sm" className="gap-2" onClick={requestConsolidate}>
               <FileDown className="h-4 w-4" />
               Consolidar CSV
             </Button>
@@ -310,7 +315,9 @@ function InventoryDashboard() {
           <DialogHeader>
             <DialogTitle>Nome da empresa</DialogTitle>
             <DialogDescription>
-              O nome aparecerá centralizado no topo do arquivo exportado.
+              {pendingKind === "csv"
+                ? "O nome será usado no arquivo consolidado gerado."
+                : "O nome aparecerá centralizado no topo do arquivo exportado."}
             </DialogDescription>
           </DialogHeader>
           <form
@@ -318,7 +325,8 @@ function InventoryDashboard() {
               e.preventDefault();
               const kind = pendingKind;
               setPendingKind(null);
-              if (kind) void exportAs(kind);
+              if (kind === "csv") consolidateCsv();
+              else if (kind) void exportAs(kind);
             }}
             className="space-y-4"
           >

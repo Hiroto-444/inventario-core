@@ -134,7 +134,13 @@ export function parseCsv(text: string, fileName: string): Machine[] {
   const delim = detectDelim(lines[0]!);
   const headers = splitLine(lines[0]!, delim).map(normKey);
 
-  return lines.slice(1).map((line, idx) => {
+  const dataLines = lines.slice(1).filter((line) => {
+    const cells = splitLine(line, delim);
+    // ignora linhas vazias / separadores (ex.: ";;;;" ou "-----")
+    return cells.some((c) => c.replace(/[-_\s]/g, "").length > 0);
+  });
+
+  const machines = dataLines.map((line, idx) => {
     const cells = splitLine(line, delim);
     const row: Record<string, string> = {};
     headers.forEach((h, i) => (row[h] = cells[i] ?? ""));
@@ -181,6 +187,8 @@ export function parseCsv(text: string, fileName: string): Machine[] {
       sourceFile: fileName,
     };
   });
+
+  return machines;
 }
 
 export const STORAGE_CRITICAL = 90;
@@ -220,7 +228,6 @@ const EXPORT_HEADERS = [
   "Data_Instalacao_Windows",
   "Dominio_Grupo",
   "Antivirus",
-  "Arquivo_Origem",
 ];
 
 function csvCell(v: string | number) {
@@ -244,7 +251,6 @@ export function machinesToCsv(machines: Machine[]) {
       m.installDate,
       m.domain,
       m.antivirus,
-      m.sourceFile,
     ]
       .map(csvCell)
       .join(";"),
